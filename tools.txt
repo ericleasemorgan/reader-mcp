@@ -1,0 +1,145 @@
+# Test the server directly with curl
+curl -X POST "http://localhost:8000/mcp" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json"          \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "test", "version": "1.0.0"}
+    }
+  }'
+
+# list resources
+curl -s -X POST "http://localhost:8000/mcp" \
+  -H "Content-Type: application/json"    \
+  -H "Accept: application/json"          \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "resources/list"
+  }' | jq
+
+# list tools
+curl -s -X POST "http://localhost:8000/mcp" \
+  -H "Content-Type: application/json"    \
+  -H "Accept: application/json"          \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "tools/list"
+  }' | jq
+
+
+############## tools ############## 
+
+# catalog
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"       \
+    -H "Accept: application/json"             \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": {
+            "name": "catalog",
+            "arguments": {}
+    }
+  }' | jq -r '.result|.content[].text' | tr '\n' '\t'
+
+# get_items
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"       \
+    -H "Accept: application/json"             \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": {
+            "name": "get_items",
+            "arguments": { "carrel":"homer"}
+    }
+  }' 
+
+
+# bibliography
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"     \
+    -H "Accept: application/json"           \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": { "name": "bibliography", "arguments": { "carrel": "homer" } }
+    }' | jq '.result|.content[]|.text' | jq fromjson
+  
+# extents
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"     \
+    -H "Accept: application/json"           \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": { "name": "extents", "arguments": { "carrel": "homer", "type":"words" } }
+    }' | jq '.result|.content[]|.text' | jq fromjson
+  
+# unigrams
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"     \
+    -H "Accept: application/json"           \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": { "name": "unigrams", "arguments": { "carrel": "homer", "size":8 } }
+    }'
+  
+# unigrams-like
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"     \
+    -H "Accept: application/json"           \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": { "name": "unigrams_like", "arguments": { "carrel": "homer", "size":8, "query":"love" } }
+    }'
+  
+# word2vec
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"     \
+    -H "Accept: application/json"           \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": { "name": "word2vec", "arguments": { "carrel": "homer", "word":"war", "depth":"8" } }
+    }'
+    
+# keywords
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"     \
+    -H "Accept: application/json"           \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": { "name": "keywords", "arguments": { "carrel": "homer" } }
+    }'
+  
+# sentences
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"     \
+    -H "Accept: application/json"           \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": { "name": "sentences", "arguments": { "carrel": "homer", "word":"Hector" } }
+    }'
+  
+

@@ -30,6 +30,26 @@ import rdr
 server  = FastMCP( NAME, json_response=True, stateless_http=True )
 library = rdr.configuration( LIBRARY )
 
+############## named-entitites: people ##############
+
+@server.tool()
+def get_carrel_people( carrel: str ) -> str:
+	'''
+		Given the name of a carrel output a frequency list of of all the people identified as a named entity
+		Args:
+			carrel (str): the name of a study carrel
+		Returns: 
+			str: a tab-delinmited list of people form the given carrel
+	'''
+	persons = rdr.entities (carrel, select='entity', like='PERSON', count=True )
+	return( str( persons ) )
+
+@server.prompt()
+def p_get_carrel_people( carrel:str ) :
+    '''Get all names of people from the given carrel and extracted from the named entity process'''
+    return( f'''Given the carrel named '{carrel}', return named entities of type PERSON.''' )
+
+
 ############## item identifiers ##############
 
 @server.tool()

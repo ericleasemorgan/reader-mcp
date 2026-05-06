@@ -50,6 +50,20 @@ curl -s -X POST "http://localhost:8000/mcp" \
     }
   }' | jq -r '.result|.content[].text' | tr '\n' '\t'
 
+# persons
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"       \
+    -H "Accept: application/json"             \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": {
+            "name": "get_carrel_people",
+            "arguments": { "carrel":"homer" }
+    }
+  }' | jq -r '.result|.content[].text' | tr '\n' '\t'
+
 # get_items
 curl -s -X POST "http://localhost:8000/mcp" \
     -H "Content-Type: application/json"       \

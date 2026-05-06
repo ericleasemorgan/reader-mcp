@@ -13,7 +13,7 @@
 
 # configure
 NAME    = 'Distant Reader MCP Server'
-LIBRARY = '/Users/eric/Documents/reader-library'
+LIBRARY = 'localLibrary'
 TXT     = 'txt'
 DROPS   = [ 'browse', 'download', 'read', 'bibliography (JSON)', 'bibliography (plain text)', 'provenance', 'gml (Graph Modeling Language)', 'metadata', 'RDF/XML' ]
 
@@ -24,12 +24,11 @@ from io                 import StringIO
 from json               import loads
 from mcp.server.fastmcp import FastMCP
 from pandas             import read_csv
-from pathlib            import Path
 import rdr
 
 # initailize
-server = FastMCP( NAME, json_response=True, stateless_http=True )
-    
+server  = FastMCP( NAME, json_response=True, stateless_http=True )
+library = rdr.configuration( LIBRARY )
 
 ############## item identifiers ##############
 
@@ -66,7 +65,8 @@ def get_plaintext( carrel: str, id:str ) -> str:
 		Returns: 
 			str: the plain text of the given item
 	'''
-	with open( Path( LIBRARY )/carrel/TXT/(id + '.txt' ) ) as handle : plaintext = handle.read()
+	id = id.replace( '‑', '-' )
+	with open( library /carrel/TXT/(id + '.txt' ) ) as handle : plaintext = handle.read()
 	return( plaintext )
 
 @server.prompt()
@@ -241,45 +241,45 @@ def p_get_extents( carrel:str, type:str ) :
     return f"""Return the extent '{type}' from the carrel named '{carrel}'."""
 
 ############## catalog, remote ##############
-
-@server.tool()
-def get_remote_catalog( word:str='love' ) -> str :
-	"""
-		Output a list of the study carrels available from remote catalog at http://carrels.distantreader.org
-		Args:
-			word (str) : a regular expression used to limit the results
-		Returns:
-			str: a list of bibliographics (identifiers, authors, titles, dates, keyword, and extents for each item in the remote library.
-	"""
-	catalog = read_csv( StringIO( rdr.catalog( location='remote', human=False ) ) )
-	catalog = catalog.drop( DROPS, axis=1 )
-	catalog = catalog.fillna('')
-	catalog = catalog[ catalog[ 'keywords' ].str.contains( word ) ]
-	catalog = catalog.rename(columns={ 'id': 'identifier' } )
-	return( catalog.to_csv( index=False ) )
-
-@server.prompt()
-def p_get_remote_catalog( word:str ) :
-    """Get a list of carrels in the remote libraray as well as their bibliiographics"""
-    return f"""Get a list of carrels from the remote library and for each item list identifiers, authors, titles, extents, and keywords. Filter the result with the the word '{word}'"""
-
-
+#
+#@server.tool()
+#def get_remote_catalog( word:str='love' ) -> str :
+#	"""
+#		Output a list of the study carrels available from remote catalog at http://carrels.distantreader.org
+#		Args:
+#			word (str) : a regular expression used to limit the results
+#		Returns:
+#			str: a list of bibliographics (identifiers, authors, titles, dates, keyword, and extents for each item in the remote library.
+#	"""
+#	catalog = read_csv( StringIO( rdr.catalog( location='remote', human=False ) ) )
+#	catalog = catalog.drop( DROPS, axis=1 )
+#	catalog = catalog.fillna('')
+#	catalog = catalog[ catalog[ 'keywords' ].str.contains( word ) ]
+#	catalog = catalog.rename(columns={ 'id': 'identifier' } )
+#	return( catalog.to_csv( index=False ) )
+#
+#@server.prompt()
+#def p_get_remote_catalog( word:str ) :
+#    """Get a list of carrels in the remote libraray as well as their bibliiographics"""
+#    return f"""Get a list of carrels from the remote library and for each item list identifiers, authors, titles, extents, and keywords. Filter the result with the the word '{word}'"""
+#
+#
 ############## keywords, remote ##############
-
-@server.tool()
-def get_remote_catalog_keywords() -> dict :
-	"""
-		Output a frequency list of keywords from the remote library of study carrels
-		Returns:
-			str: a frequency list of keywords
-	"""
-	catalog  = read_csv( StringIO( rdr.catalog( location='remote', human=False ) ) )
-	return( dict( Counter( catalog[ 'keywords' ].str.cat().replace( ';', '' ).split() ) ) )
-
-@server.prompt()
-def get_remote_catalog_keywords( word:str ) :
-    """Get a frequency list of keywords from the remote library of study carrels """
-    return f"""Count and tabulate the keywords in the remote library of study carrels.'"""
+#
+#@server.tool()
+#def get_remote_catalog_keywords() -> dict :
+#	"""
+#		Output a frequency list of keywords from the remote library of study carrels
+#		Returns:
+#			str: a frequency list of keywords
+#	"""
+#	catalog  = read_csv( StringIO( rdr.catalog( location='remote', human=False ) ) )
+#	return( dict( Counter( catalog[ 'keywords' ].str.cat().replace( ';', '' ).split() ) ) )
+#
+#@server.prompt()
+#def get_remote_catalog_keywords( word:str ) :
+#    """Get a frequency list of keywords from the remote library of study carrels """
+#    return f"""Count and tabulate the keywords in the remote library of study carrels.'"""
 
 
 ############## resources, but I don't think they work ##############

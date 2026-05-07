@@ -9,6 +9,7 @@
 # April 28, 2026 - added unigrams; this is working!
 # April 29, 2026 - added sentences and keywords
 # May    3, 2026 - added a few more tools and associated prompts; I don't thing resources work
+# May    7, 2026 - added even more tool; this is really working very well
 
 
 # configure
@@ -30,6 +31,66 @@ import rdr
 server  = FastMCP( NAME, json_response=True, stateless_http=True )
 library = rdr.configuration( LIBRARY )
 
+
+############## pos: adjectives ##############
+
+@server.tool()
+def get_carrel_adjectives( carrel: str ) -> str:
+	'''
+		Given the name of a carrel output a frequency list of of all the adjectives identified as a part-of-speech value. This process helps identify how the things in this carrel are described.
+		Args:
+			carrel (str): the name of a study carrel
+		Returns: 
+			str: a tab-delinmited list of adjectives form the given carrel
+	'''
+	return( str( rdr.pos(carrel, select='lemma', like='ADJ', count=True ) ) )
+
+@server.prompt()
+def p_get_carrel_adjectives( carrel:str ) :
+    '''Get all adjectives from the given carrel and extracted from the parts-of-speech process'''
+    return( f'''Given the carrel named '{carrel}', return a frequency list of all the adjectives.''' )
+
+
+############## pos: verbs ##############
+
+@server.tool()
+def get_carrel_verbs( carrel: str ) -> str:
+	'''
+		Given the name of a carrel output a frequency list of of all the lemmatized version of verbs identified as a part-of-speech value. This process helps identify what the things in this carrel do; what actions do they take.
+		Args:
+			carrel (str): the name of a study carrel
+		Returns: 
+			str: a tab-delinmited list of lemmatized verbs form the given carrel
+	'''
+	return( str( rdr.pos(carrel, select='lemma', like='VERB', count=True ) ) )
+
+@server.prompt()
+def p_get_carrel_verbs( carrel:str ) :
+    '''Get all lemmatized verbs from the given carrel and extracted from the parts-of-speech process'''
+    return( f'''Given the carrel named '{carrel}', return the lemmatized part-of-speech value of VERB.''' )
+
+
+############## pos: nouns ##############
+
+@server.tool()
+def get_carrel_nouns( carrel: str ) -> str:
+	'''
+		Given the name of a carrel output a frequency list of of all the nouns identified as a part-of-speech value
+		Args:
+			carrel (str): the name of a study carrel
+		Returns: 
+			str: a tab-delinmited list of nouns form the given carrel
+	'''
+	LIMIT = 1024
+	#return( str( rdr.ngrams( carrel, size=1, count=True ).splitlines()[ :LIMIT ] ) )
+	return( str( rdr.pos(carrel, select='words', like='NOUN', count=True ).splitlines()[ :LIMIT ] ) )
+
+@server.prompt()
+def p_get_carrel_nouns( carrel:str ) :
+    '''Get all nouns from the given carrel and extracted from the parts-of-speech process'''
+    return( f'''Given the carrel named '{carrel}', return part-of-speech of type NOUN.''' )
+
+
 ############## named-entitites: people ##############
 
 @server.tool()
@@ -41,8 +102,7 @@ def get_carrel_people( carrel: str ) -> str:
 		Returns: 
 			str: a tab-delinmited list of people form the given carrel
 	'''
-	persons = rdr.entities (carrel, select='entity', like='PERSON', count=True )
-	return( str( persons ) )
+	return( str( rdr.entities (carrel, select='entity', like='PERSON', count=True ) ) )
 
 @server.prompt()
 def p_get_carrel_people( carrel:str ) :
@@ -62,14 +122,11 @@ def get_item_identifiers( carrel: str ) -> str:
 			str: a list of all the items's identifiers
 	'''
 	bibliography = loads( rdr.bibliography( carrel, format='json' ) )
-	identifiers  = [ item[ 'id' ] for item in bibliography ]
-	return( str( identifiers ) )
+	return( str( [ item[ 'id' ] for item in bibliography ] ) )
 
 @server.prompt()
 def p_get_item_identifiers( carrel:str ) :
-    '''
-    	Get all item identifiers from a given carrel
-    '''
+    '''Get all item identifiers from a given carrel'''
     return( f'''Given the carrel named '{carrel}', return all item identifiers it contains.''' )
 
 
@@ -91,9 +148,7 @@ def get_plaintext( carrel: str, id:str ) -> str:
 
 @server.prompt()
 def p_get_plaintext( carrel:str, id:str ) :
-    '''
-    	Retrieve the plain text version of an item
-    '''
+    '''Retrieve the plain text version of an item'''
     return( f'''Given the carrel named '{carrel}' and the identifier '{id}', get the plain text version of the item.''' )
 
 
@@ -125,7 +180,7 @@ def p_get_sentences_word( carrel:str, word:str ) :
 
 @server.tool()
 def get_keywords( carrel:str ) -> str :
-    """Count and tabulate the keywords associated with the given study carrel
+    """Count and tabulate the keywords associated with the given study carrel. This process addresses the question "What sorts of things are discussed in this carrel?"
 	Args:
 		carrel (str): The name of a carrel.
     Returns:
@@ -165,23 +220,40 @@ def p_get_word2vec( carrel:str, word:str, depth:int ) :
 ############## ungrams ##############
 
 @server.tool()
-def get_unigrams( carrel:str, size:int=128 ) -> str :
+def get_unigrams( carrel:str ) -> str :
     """
-    	Outputs the counts and tabulations of the most frequent individual words in the given carrel
+    	Outputs the counts and tabulations of the most frequent individual words (unigrams) in the given carrel. The output will be limited to approximately 1000 items to prevent exceeding prompt lengths. This process addresses the question "What sorts of things are discussed in this carrel?"
 		Args:
 			carrel (str): The name of a carrel.
-			size (int): Limit the output to this many words
     	Returns:
         	str: a list of the carrel's most frequent unigrams
     """
-    return( str( rdr.ngrams( carrel, size=1, count=True ).splitlines()[:size] ) )
+    LIMIT = 1024
+    return( str( rdr.ngrams( carrel, size=1, count=True ).splitlines()[ :LIMIT ] ) )
 
 @server.prompt()
 def p_get_unigrams( carrel:str, size:int ) :
-    """Count & tabulate individual words in the given carrel"""
-    return f"""
-    Given the carrel named '{carrel}', count and tabulate the most frequent '{size}' individual words.  
+    """Count & tabulate individual words (unigrams) in the given carrel"""
+    return f"""Given the carrel named '{carrel}', count and tabulate the most frequent individual words (unigrams)."""
+
+############## ungrams ##############
+
+@server.tool()
+def get_bigrams( carrel:str ) -> str :
     """
+    	Outputs the counts and tabulations of the most two-word phrases (bigrams) from the given carrel. The output will be limited to approximately 1000 items to prevent exceeding prompt lengths. This process addresses the question "What sorts of things are discussed in this carrel?"
+		Args:
+			carrel (str): The name of a carrel.
+    	Returns:
+        	str: a list of the carrel's most frequent bigrams
+    """
+    LIMIT = 1024
+    return( str( rdr.ngrams( carrel, size=2, count=True ).splitlines()[ :LIMIT ] ) )
+
+@server.prompt()
+def p_get_unigrams( carrel:str ) :
+    """Count & tabulate two-word phrases (bigrams) in the given carrel"""
+    return f"""Given the carrel named '{carrel}', count and tabulate the most frequent two-word phrases (bigrams)."""
 
 
 ############## unigram counts with filter ##############

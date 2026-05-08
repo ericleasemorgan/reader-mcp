@@ -10,6 +10,7 @@
 # April 29, 2026 - added sentences and keywords
 # May    3, 2026 - added a few more tools and associated prompts; I don't thing resources work
 # May    7, 2026 - added even more tool; this is really working very well
+# May    8, 2026 - added get full path to original items
 
 
 # configure
@@ -49,6 +50,34 @@ def get_carrel_adjectives( carrel: str ) -> str:
 def p_get_carrel_adjectives( carrel:str ) :
     '''Get all adjectives from the given carrel and extracted from the parts-of-speech process'''
     return( f'''Given the carrel named '{carrel}', return a frequency list of all the adjectives.''' )
+
+
+############## full path to origial document ##############
+
+@server.tool()
+def get_fullpath_to_original_item( carrel: str, item:str ) -> str:
+	'''
+		Given the name of a carrel and an identifier in the carrel, output the full path to the item in its original form
+		Args:
+			carrel (str): the name of a study carrel
+			item (str): an identifier
+		Returns: 
+			str: the full path to the original item in the given study carrel
+	'''
+	found = False 
+	for record in loads( rdr.bibliography( carrel, format='json' ) ) :
+		if record[ 'id' ] == item :
+			fullpath = 'file://' + str( library/carrel/(rdr.CACHE)/( item + record[ 'extension' ] ) )
+			found    = True
+			break
+	
+	if found : return( fullpath )
+	else     : return( "That item was not found, are you sure the identifier's value is correct?" )
+
+@server.prompt()
+def p_fullpath_to_original_item( carrel:str, item: str ) :
+    '''The the full path to the original version of the given item in the given carrel'''
+    return( f'''Given the carrel named '{carrel}', return the full path to the original version of '{item}'.''' )
 
 
 ############## pos: verbs ##############

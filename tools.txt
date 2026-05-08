@@ -92,6 +92,21 @@ curl -s -X POST "http://localhost:8000/mcp" \
     }
   }' | jq -r '.result|.content[].text' | tr '\n' '\t'
 
+# full path to original
+curl -s -X POST "http://localhost:8000/mcp" \
+    -H "Content-Type: application/json"       \
+    -H "Accept: application/json"             \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "tools/call",
+        "params": {
+            "name": "get_fullpath_to_original_item",
+            "arguments": { "carrel":"homer", "item":"homer-iliad_02" }
+    }
+  }'
+
+
 # lemmatized verbs
 curl -s -X POST "http://localhost:8000/mcp" \
     -H "Content-Type: application/json"       \

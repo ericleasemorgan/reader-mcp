@@ -27,6 +27,11 @@ from json               import loads
 from mcp.server.fastmcp import FastMCP
 from pandas             import read_csv
 import rdr
+from typing     import List
+from struct     import pack
+
+# serializes a list of floats into a compact "raw bytes" format; makes things more efficient?
+def serialize( vector: List[float]) -> bytes : return pack( "%sf" % len( vector ), *vector )
 
 # initailize
 server  = FastMCP( NAME, json_response=True, stateless_http=True )
@@ -184,25 +189,58 @@ def p_get_plaintext( carrel:str, id:str ) :
 ############## words in sentences ##############
 
 @server.tool()
-def get_sentences_word( carrel:str, word:str ) -> str :
+def get_sentences_word( carrel:str, query:str ) -> str :
 	"""
-		Output all sentences from the given carrel which contain the given word or phrase
+		Output all sentences from the given carrel which contain or are semantically simlar to the given word or phrase
 		Args:
 			carrel (str): The name of a carrel.
-			word (str): An individual word or phase
+			query (str): An individual word or phase
 		Returns:
 			str: a new-line delimited list of sentences
 	"""
-	sentences = StringIO()
-	with redirect_stdout( sentences ): rdr.sentences( carrel, process='filter', query=word )	
-	return( sentences.getvalue() )
+
+	DATABASE = 'sentences.db'
+	DEPTH    = 1024
+	COLUMNS  = [ 'item', 'index', 'sentence' ]
+	SELECT   = "SELECT title AS 'item', item AS 'index', sentence, VEC_DISTANCE_L2(embedding, ?) AS distance FROM sentences ORDER BY distance LIMIT ?"
+	MODEL    = 'locusai/multi-qa-minilm-l6-cos-v1'
+	
+	from sqlite_vec import load
+	from sqlite3    import connect
+	from ollama     import embed
+	from pandas     import DataFrame
+
+	database = connect( rdr.configuration( LIBRARY )/carrel/(rdr.ETC)/DATABASE )
+	database.enable_load_extension( True )
+	load( database )
+
+	# vectorize query and search; get a set of matching records
+	query   = embed( model=MODEL, input=query ).model_dump( mode='json' )[ 'embeddings' ][ 0 ]
+	records = database.execute( SELECT, [ serialize( query ), DEPTH ] ).fetchall()
+
+	sentences = []
+	for record in records :
+	
+		# parse
+		title    = record[ 0 ]
+		item     = record[ 1 ]
+		sentence = record[ 2 ]
+		distance = record[ 3 ]
+		
+		# short-circuit
+		if distance > 1 : break
+		
+		# update
+		sentences.append( [ title, item, sentence ] )
+	
+	# create a dataframe of the sentences and sort by title
+	sentences = DataFrame( sentences, columns=COLUMNS )
+	return( sentences.to_json( orient='index' ) )
 
 @server.prompt()
-def p_get_sentences_word( carrel:str, word:str ) :
-    '''
-    	Retrieve the plain text version of an item
-    '''
-    return( f'''Given the carrel named '{carrel}' list all of the sentences including the word '{word}'.''' )
+def p_get_sentences_word( carrel:str, query:str ) :
+    '''Return the sentences including or semantically similar to the given word from the given carrel'''
+    return( f'''Given the carrel named '{carrel}' list all of the sentences including or semantically similar to the word or phrase '{query}'.''' )
 
 
 ############## keywords from carrel ##############

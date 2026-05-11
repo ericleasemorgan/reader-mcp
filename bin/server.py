@@ -8,27 +8,23 @@
 # April 27, 2026 - first cut
 # April 28, 2026 - added unigrams; this is working!
 # April 29, 2026 - added sentences and keywords
-# May    3, 2026 - added a few more tools and associated prompts; I don't thing resources work
+# May    3, 2026 - added a few more tools and associated prompts; I don't think resources work
 # May    7, 2026 - added even more tool; this is really working very well
 # May    8, 2026 - added get full path to original items
+# May   11, 2026 - cleaned up naming conventions; works the same though
 
 
 # configure
 NAME    = 'Distant Reader MCP Server'
 LIBRARY = 'localLibrary'
 TXT     = 'txt'
-DROPS   = [ 'browse', 'download', 'read', 'bibliography (JSON)', 'bibliography (plain text)', 'provenance', 'gml (Graph Modeling Language)', 'metadata', 'RDF/XML' ]
 
 # require
-from collections        import Counter
-from contextlib         import redirect_stdout
-from io                 import StringIO
 from json               import loads
 from mcp.server.fastmcp import FastMCP
-from pandas             import read_csv
+from struct             import pack
+from typing             import List
 import rdr
-from typing     import List
-from struct     import pack
 
 # serializes a list of floats into a compact "raw bytes" format; makes things more efficient?
 def serialize( vector: List[float]) -> bytes : return pack( "%sf" % len( vector ), *vector )
@@ -41,18 +37,18 @@ library = rdr.configuration( LIBRARY )
 ############## pos: adjectives ##############
 
 @server.tool()
-def get_carrel_adjectives( carrel: str ) -> str:
+def getCarrelAdjectives( carrel: str ) -> str:
 	'''
-		Given the name of a carrel output a frequency list of of all the adjectives identified as a part-of-speech value. This process helps identify how the things in this carrel are described.
+		Given the name of a carrel output a frequency list of of all the adjectives identified as a part-of-speech value. This process helps identify how the things in the carrel are described.
 		Args:
 			carrel (str): the name of a study carrel
 		Returns: 
-			str: a tab-delinmited list of adjectives form the given carrel
+			str: a tab-delinmited list of adjectives from the given carrel
 	'''
 	return( str( rdr.pos(carrel, select='lemma', like='ADJ', count=True ) ) )
 
 @server.prompt()
-def p_get_carrel_adjectives( carrel:str ) :
+def p_getCarrelAdjectives( carrel:str ) :
     '''Get all adjectives from the given carrel and extracted from the parts-of-speech process'''
     return( f'''Given the carrel named '{carrel}', return a frequency list of all the adjectives.''' )
 
@@ -60,7 +56,7 @@ def p_get_carrel_adjectives( carrel:str ) :
 ############## full path to origial document ##############
 
 @server.tool()
-def get_fullpath_to_original_item( carrel: str, item:str ) -> str:
+def getFullPathToOriginalItem( carrel: str, item:str ) -> str:
 	'''
 		Given the name of a carrel and an identifier in the carrel, output the full path to the item in its original form
 		Args:
@@ -80,7 +76,7 @@ def get_fullpath_to_original_item( carrel: str, item:str ) -> str:
 	else     : return( "That item was not found, are you sure the identifier's value is correct?" )
 
 @server.prompt()
-def p_fullpath_to_original_item( carrel:str, item: str ) :
+def p_getFullPathToOriginalItem( carrel:str, item: str ) :
     '''The the full path to the original version of the given item in the given carrel'''
     return( f'''Given the carrel named '{carrel}', return the full path to the original version of '{item}'.''' )
 
@@ -88,9 +84,9 @@ def p_fullpath_to_original_item( carrel:str, item: str ) :
 ############## pos: verbs ##############
 
 @server.tool()
-def get_carrel_verbs( carrel: str ) -> str:
+def getCarrelVerbs( carrel: str ) -> str:
 	'''
-		Given the name of a carrel output a frequency list of of all the lemmatized version of verbs identified as a part-of-speech value. This process helps identify what the things in this carrel do; what actions do they take.
+		Given the name of a carrel output a frequency list of of all the lemmatized verbs identified as a part-of-speech value. This process helps identify what the things in this carrel do; what actions do they take.
 		Args:
 			carrel (str): the name of a study carrel
 		Returns: 
@@ -99,28 +95,28 @@ def get_carrel_verbs( carrel: str ) -> str:
 	return( str( rdr.pos(carrel, select='lemma', like='VERB', count=True ) ) )
 
 @server.prompt()
-def p_get_carrel_verbs( carrel:str ) :
-    '''Get all lemmatized verbs from the given carrel and extracted from the parts-of-speech process'''
+def p_getCarrelVerbs( carrel:str ) :
+    '''Get all lemmatized verbs from the given carrel as extracted from the parts-of-speech process'''
     return( f'''Given the carrel named '{carrel}', return the lemmatized part-of-speech value of VERB.''' )
 
 
 ############## pos: nouns ##############
 
 @server.tool()
-def get_carrel_nouns( carrel: str ) -> str:
+def getCarrelNouns( carrel: str ) -> str:
 	'''
-		Given the name of a carrel output a frequency list of of all the nouns identified as a part-of-speech value
+		Given the name of a carrel output a frequency list of of all the nouns identified as a part-of-speech value. This helps identify what it mentioned in the given carrel.
 		Args:
 			carrel (str): the name of a study carrel
 		Returns: 
-			str: a tab-delinmited list of nouns form the given carrel
+			str: a tab-delinmited list of nouns from the given carrel
 	'''
 	LIMIT = 1024
 	#return( str( rdr.ngrams( carrel, size=1, count=True ).splitlines()[ :LIMIT ] ) )
 	return( str( rdr.pos(carrel, select='words', like='NOUN', count=True ).splitlines()[ :LIMIT ] ) )
 
 @server.prompt()
-def p_get_carrel_nouns( carrel:str ) :
+def p_getCarrelNouns( carrel:str ) :
     '''Get all nouns from the given carrel and extracted from the parts-of-speech process'''
     return( f'''Given the carrel named '{carrel}', return part-of-speech of type NOUN.''' )
 
@@ -128,9 +124,9 @@ def p_get_carrel_nouns( carrel:str ) :
 ############## named-entitites: people ##############
 
 @server.tool()
-def get_carrel_people( carrel: str ) -> str:
+def getCarrelPeople( carrel: str ) -> str:
 	'''
-		Given the name of a carrel output a frequency list of of all the people identified as a named entity
+		Given the name of a carrel output a frequency list of of all the people identified as a named entity. This helps identify who is mentioned in teh carrel.
 		Args:
 			carrel (str): the name of a study carrel
 		Returns: 
@@ -139,7 +135,7 @@ def get_carrel_people( carrel: str ) -> str:
 	return( str( rdr.entities (carrel, select='entity', like='PERSON', count=True ) ) )
 
 @server.prompt()
-def p_get_carrel_people( carrel:str ) :
+def p_getCarrelPeople( carrel:str ) :
     '''Get all names of people from the given carrel and extracted from the named entity process'''
     return( f'''Given the carrel named '{carrel}', return named entities of type PERSON.''' )
 
@@ -147,7 +143,7 @@ def p_get_carrel_people( carrel:str ) :
 ############## item identifiers ##############
 
 @server.tool()
-def get_item_identifiers( carrel: str ) -> str:
+def getItemIdentifiers( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a list of all the item identifiers
 		Args:
@@ -159,7 +155,7 @@ def get_item_identifiers( carrel: str ) -> str:
 	return( str( [ item[ 'id' ] for item in bibliography ] ) )
 
 @server.prompt()
-def p_get_item_identifiers( carrel:str ) :
+def p_getItemIdentifiers( carrel:str ) :
     '''Get all item identifiers from a given carrel'''
     return( f'''Given the carrel named '{carrel}', return all item identifiers it contains.''' )
 
@@ -167,31 +163,31 @@ def p_get_item_identifiers( carrel:str ) :
 ############## plain text ##############
 
 @server.tool()
-def get_plaintext( carrel: str, id:str ) -> str:
+def getPlaintext( carrel: str, identifier:str ) -> str:
 	'''
-		Given the name of a carrel and an identifier in the carrel, return the plain text of the item
+		Given the name of a carrel and an identifier, return the plain text of the item. The result is useful for analysis of the resulting text.
 		Args:
 			carrel (str): the name of a study carrel
-			id (str): an identifier pointing to an specific item in the carrel
+			identifier (str): an identifier pointing to an specific item in the carrel
 		Returns: 
 			str: the plain text of the given item
 	'''
-	id = id.replace( '‑', '-' )
-	with open( library /carrel/TXT/(id + '.txt' ) ) as handle : plaintext = handle.read()
+	identifier = identifier.replace( '‑', '-' )
+	with open( library /carrel/TXT/(identifier + '.txt' ) ) as handle : plaintext = handle.read()
 	return( plaintext )
 
 @server.prompt()
-def p_get_plaintext( carrel:str, id:str ) :
-    '''Retrieve the plain text version of an item'''
-    return( f'''Given the carrel named '{carrel}' and the identifier '{id}', get the plain text version of the item.''' )
+def p_getPlaintext( carrel:str, identifier:str ) :
+    '''Retrieve the plain text version of an item from a carrel'''
+    return( f'''Given the carrel named '{carrel}' and the identifier '{identifier}', get the plain text version of the item.''' )
 
 
 ############## words in sentences ##############
 
 @server.tool()
-def get_sentences_word( carrel:str, query:str ) -> str :
+def getSentencesWord( carrel:str, query:str ) -> str :
 	"""
-		Output all sentences from the given carrel which contain or are semantically simlar to the given word or phrase
+		Output all sentences from the given carrel which contains or are semantically simlar to the given word or phrase. The resulting sentences are usefu for further analysis.
 		Args:
 			carrel (str): The name of a carrel.
 			query (str): An individual word or phase
@@ -238,16 +234,16 @@ def get_sentences_word( carrel:str, query:str ) -> str :
 	return( sentences.to_json( orient='index' ) )
 
 @server.prompt()
-def p_get_sentences_word( carrel:str, query:str ) :
-    '''Return the sentences including or semantically similar to the given word from the given carrel'''
-    return( f'''Given the carrel named '{carrel}' list all of the sentences including or semantically similar to the word or phrase '{query}'.''' )
+def p_getSentencesWord( carrel:str, query:str ) :
+    '''Return the sentences including or semantically similar to the given word or phrase from the given carrel'''
+    return( f'''Given the carrel named '{carrel}' list all of the sentences including or are semantically similar to the word or phrase '{query}'.''' )
 
 
 ############## keywords from carrel ##############
 
 @server.tool()
-def get_keywords( carrel:str ) -> str :
-    """Count and tabulate the keywords associated with the given study carrel. This process addresses the question "What sorts of things are discussed in this carrel?"
+def getKeywords( carrel:str ) -> str :
+    """Count and tabulate the keywords associated with the given study carrel. This process addresses the questions, "What sorts of things are discussed in this carrel?" or "What is the carrel about?"
 	Args:
 		carrel (str): The name of a carrel.
     Returns:
@@ -255,16 +251,14 @@ def get_keywords( carrel:str ) -> str :
     return( rdr.keywords( carrel, count=True ) )
 
 @server.prompt()
-def p_get_keywords( carrel:str, size:int ) :
+def p_getKeywords( carrel:str ) :
     """Count and tabulate the keywords associated with the given study carrel"""
-    return f"""
-    Given the carrel named '{carrel}', count and tabulate the most frequent '{size}' keywords.  
-    """
+    return f"""Given the carrel named '{carrel}', count and tabulate the keywords."""
 
 ############## semantically similar words ##############
 
 @server.tool()
-def get_word2vec( carrel:str, word:str, depth:int=8 ) -> str :
+def getSemanticallySimilarWords( carrel:str, word:str, depth:int=16 ) -> str :
     """
     	Given the name of a study carrel and a word, outut the depth number of semantically similar words as well as their associated scores.
 		Args:
@@ -277,17 +271,15 @@ def get_word2vec( carrel:str, word:str, depth:int=8 ) -> str :
     return( rdr.word2vec( carrel, type='similarity', query=word, topn=depth ) )
 
 @server.prompt()
-def p_get_word2vec( carrel:str, word:str, depth:int ) :
+def p_getSemanticallySimilarWords( carrel:str, word:str, depth:int ) :
     """From the given carrel, word, and depth, count and tabulate the semantically simlar words"""
-    return f"""
-    Given the carrel named '{carrel}', count and tabulate the semantically simlar to '{word}' and limitd the output to '{depth}' words.  
-    """
+    return f"""Given the carrel named '{carrel}', count and tabulate the semantically simlar to '{word}' and limit the output to '{depth}' words."""
 
 
 ############## ungrams ##############
 
 @server.tool()
-def get_unigrams( carrel:str ) -> str :
+def getUnigrams( carrel:str ) -> str :
     """
     	Outputs the counts and tabulations of the most frequent individual words (unigrams) in the given carrel. The output will be limited to approximately 1000 items to prevent exceeding prompt lengths. This process addresses the question "What sorts of things are discussed in this carrel?"
 		Args:
@@ -299,16 +291,16 @@ def get_unigrams( carrel:str ) -> str :
     return( str( rdr.ngrams( carrel, size=1, count=True ).splitlines()[ :LIMIT ] ) )
 
 @server.prompt()
-def p_get_unigrams( carrel:str, size:int ) :
+def p_getUnigrams( carrel:str, size:int ) :
     """Count & tabulate individual words (unigrams) in the given carrel"""
     return f"""Given the carrel named '{carrel}', count and tabulate the most frequent individual words (unigrams)."""
 
 ############## ungrams ##############
 
 @server.tool()
-def get_bigrams( carrel:str ) -> str :
+def getBigrams( carrel:str ) -> str :
     """
-    	Outputs the counts and tabulations of the most two-word phrases (bigrams) from the given carrel. The output will be limited to approximately 1000 items to prevent exceeding prompt lengths. This process addresses the question "What sorts of things are discussed in this carrel?"
+    	Outputs the counts and tabulations of the two-word phrases (bigrams) from the given carrel. The output will be limited to approximately 1000 items to prevent exceeding prompt lengths. This process addresses the question "What sorts of things are discussed in this carrel?"
 		Args:
 			carrel (str): The name of a carrel.
     	Returns:
@@ -318,36 +310,15 @@ def get_bigrams( carrel:str ) -> str :
     return( str( rdr.ngrams( carrel, size=2, count=True ).splitlines()[ :LIMIT ] ) )
 
 @server.prompt()
-def p_get_unigrams( carrel:str ) :
+def p_getBigrams( carrel:str ) :
     """Count & tabulate two-word phrases (bigrams) in the given carrel"""
     return f"""Given the carrel named '{carrel}', count and tabulate the most frequent two-word phrases (bigrams)."""
-
-
-############## unigram counts with filter ##############
-
-@server.tool()
-def get_count_unigrams_like( carrel:str, filter:str, size:int=32 ) -> str :
-    """
-    	Outputs the counts and tabulations of 32 most frequent individual words in the given carrel and matching the given query
-			Args:
-				carrel (str): The name of a carrel.
-				filter (str): A regular expression used to filter the results
-				size (int): Limit the output to this many words
-    		Returns:
-        		str: a list of the carrels accessible fron this system
-    """
-    return( str( rdr.ngrams( carrel, size=1, count=True, query=filter ).splitlines()[:size] ) )
-
-@server.prompt()
-def p_get_count_unigrams_like( carrel:str, filter:str, size:int, ) :
-    """Count & tabulate individual words from the given carrel matching a regular expression filter"""
-    return( f"""Given the carrel named '{carrel}', count and tabulate the most frequent '{size}' individual words matching a '{filter}'.""" )
 
 
 ############## catalog ##############
 
 @server.tool()
-def get_catalog() -> str :
+def getCatalog() -> str :
     """
 		Output the list of study carrels available from the local library.
     	Returns:
@@ -356,7 +327,7 @@ def get_catalog() -> str :
     return( rdr.catalog() )
 
 @server.prompt()
-def p_get_catalog() :
+def p_getCatalog() :
     """Get a list of the carrels available in the local library"""
     return( f"""In the form of a paragraph, list the carrels available from the local library.""" )
 
@@ -364,9 +335,9 @@ def p_get_catalog() :
 ############## bibliography ##############
 
 @server.tool()
-def get_bibliography( carrel: str ) -> str:
+def getBibliography( carrel: str ) -> str:
 	"""
-		Output the bibliographic (author, title, date, summary, keywords, flesch score, number of words) information for the given carrel.
+		Output the bibliographic metadata (author, title, date, summary, keywords, flesch score, and number of words) for the given carrel.
 		Args:
 			carrel (str): The name of a carrel.
 		Returns:
@@ -375,7 +346,7 @@ def get_bibliography( carrel: str ) -> str:
 	return( rdr.bibliography( carrel, format='json' ) )
 
 @server.prompt()
-def p_get_bibliography( carrel:str ) :
+def p_getBibliography( carrel:str ) :
     """Given the name of a carrel, output the bibliographic elements of each item in the carrel"""
     return( f"""Given the carrel named '{carrel}', output the identifier, author, title, date, summary, keywords, Flesch (readability) score, and size measure in words for each item in the carrel.""" )
 
@@ -383,62 +354,21 @@ def p_get_bibliography( carrel:str ) :
 ############## extents ##############
 
 @server.tool()
-def get_extents( carrel:str, type:str ) -> int:
+def getExtents( carrel:str, type:str ) -> int:
     """
-    Given the name of a study carrel and type of extent (items, words, or flesch) return the size of the carrel.
-    Args:
-        carrel (str): The name of a local Distant Reader study carrel.
-        type (str): One of three values: 1) items, 2) words, 3) flesch score
-    Returns:
-        int: a number denoting the quanity of the given type
+		Given the name of a study carrel and the type of an extent (items, words, or flesch) return the size of the carrel.
+		Args:
+			carrel (str): The name of a local Distant Reader study carrel.
+			type (str): One of three values: 1) items, 2) words, 3) flesch score
+		Returns:
+			int: a number denoting the quanity of the given type
     """
     return( rdr.extents( carrel, type ) )
 
 @server.prompt()
-def p_get_extents( carrel:str, type:str ) :
+def p_getExtents( carrel:str, type:str ) :
     """Get extents (size measured in words, flesch (readability), size measured in items)."""
     return f"""Return the extent '{type}' from the carrel named '{carrel}'."""
-
-############## catalog, remote ##############
-#
-#@server.tool()
-#def get_remote_catalog( word:str='love' ) -> str :
-#	"""
-#		Output a list of the study carrels available from remote catalog at http://carrels.distantreader.org
-#		Args:
-#			word (str) : a regular expression used to limit the results
-#		Returns:
-#			str: a list of bibliographics (identifiers, authors, titles, dates, keyword, and extents for each item in the remote library.
-#	"""
-#	catalog = read_csv( StringIO( rdr.catalog( location='remote', human=False ) ) )
-#	catalog = catalog.drop( DROPS, axis=1 )
-#	catalog = catalog.fillna('')
-#	catalog = catalog[ catalog[ 'keywords' ].str.contains( word ) ]
-#	catalog = catalog.rename(columns={ 'id': 'identifier' } )
-#	return( catalog.to_csv( index=False ) )
-#
-#@server.prompt()
-#def p_get_remote_catalog( word:str ) :
-#    """Get a list of carrels in the remote libraray as well as their bibliiographics"""
-#    return f"""Get a list of carrels from the remote library and for each item list identifiers, authors, titles, extents, and keywords. Filter the result with the the word '{word}'"""
-#
-#
-############## keywords, remote ##############
-#
-#@server.tool()
-#def get_remote_catalog_keywords() -> dict :
-#	"""
-#		Output a frequency list of keywords from the remote library of study carrels
-#		Returns:
-#			str: a frequency list of keywords
-#	"""
-#	catalog  = read_csv( StringIO( rdr.catalog( location='remote', human=False ) ) )
-#	return( dict( Counter( catalog[ 'keywords' ].str.cat().replace( ';', '' ).split() ) ) )
-#
-#@server.prompt()
-#def get_remote_catalog_keywords( word:str ) :
-#    """Get a frequency list of keywords from the remote library of study carrels """
-#    return f"""Count and tabulate the keywords in the remote library of study carrels.'"""
 
 
 ############## resources, but I don't think they work ##############
@@ -469,7 +399,5 @@ def file_readme() -> str:
 
 
 # go
-if __name__ == "__main__" :
+if __name__ == "__main__" : server.run( transport="streamable-http" )
 
-	#server.run(transport="stdio")
-	server.run(transport="streamable-http")

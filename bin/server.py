@@ -13,6 +13,7 @@
 # May 8, 2026    - added get full path to original items
 # May 11, 2026   - cleaned up naming conventions; works the same though
 # May 15, 2026   - refined inline to expose interesting, POS, and entity words; limite results to segments of lists
+# May 24, 2026   - refined the documentation regarding items; works better
 
 
 # configure
@@ -200,7 +201,7 @@ def p_getCarrelPlaces( carrel:str ) :
 ############## item identifiers ##############
 
 @server.tool()
-def getItemIdentifiers( carrel: str ) -> str:
+def getItems( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a list of all the item identifiers
 		Args:
@@ -213,7 +214,7 @@ def getItemIdentifiers( carrel: str ) -> str:
 	return( str( [ item[ 'id' ] for item in bibliography ] ) )
 
 @server.prompt()
-def p_getItemIdentifiers( carrel:str ) :
+def p_getItems( carrel:str ) :
 	'''Get all item identifiers from a given carrel'''
 	return( f'''Given the carrel named '{carrel}', return all item identifiers it contains.''' )
 
@@ -221,24 +222,24 @@ def p_getItemIdentifiers( carrel:str ) :
 ############## plain text ##############
 
 @server.tool()
-def getPlaintext( carrel: str, identifier:str ) -> str:
+def getPlaintext( carrel: str, item:str ) -> str:
 	'''
-		Given the name of a carrel and an identifier, return the plain text of the item. The result is useful for analysis of the resulting text.
+		Given the name of a carrel and an item, return the plain text of the item. The result is useful for analysis of the resulting text.
 		Args:
 			carrel (str): the name of a study carrel
-			identifier (str): an identifier pointing to an specific item in the carrel
+			item (str): an identifier pointing to an specific item in the carrel
 		Returns: 
 			str: the plain text of the given item
 	'''
 	carrel = carrel.replace( '‑', '-' )
-	identifier = identifier.replace( '‑', '-' )
-	with open( library /carrel/TXT/(identifier + '.txt' ) ) as handle : plaintext = handle.read()
+	item = item.replace( '‑', '-' )
+	with open( library /carrel/TXT/(item + '.txt' ) ) as handle : plaintext = handle.read()
 	return( plaintext )
 
 @server.prompt()
-def p_getPlaintext( carrel:str, identifier:str ) :
+def p_getPlaintext( carrel:str, item:str ) :
 	'''Retrieve the plain text version of an item from a carrel'''
-	return( f'''Given the carrel named '{carrel}' and the identifier '{identifier}', get the plain text version of the item.''' )
+	return( f'''Given the carrel named '{carrel}' and the identifier '{item}', get the plain text version of the item.''' )
 
 
 ############## words in sentences ##############
@@ -305,7 +306,7 @@ def p_getSentencesWord( carrel:str, query:str ) :
 @server.tool()
 def getKeywords( carrel:str ) -> str :
 	"""
-		Count and tabulate the keywords associated with the given study carrel. This process addresses the questions, "What sorts of things are discussed in this carrel?" or "What is the carrel about? These are interesting words."
+		Count and tabulate the keywords associated with the given study carrel. This process addresses the questions, "What sorts of things are discussed in this carrel?" or "What is the carrel about? These are 'interesting' words."
 		Args:
 			carrel (str): The name of a carrel.
 		Returns:
@@ -346,7 +347,7 @@ def p_getSemanticallySimilarWords( carrel:str, word:str, depth:int ) :
 @server.tool()
 def getUnigrams( carrel:str ) -> str :
 	"""
-		Outputs the counts and tabulations of individual words (unigrams) in the given carrel. These are interesting words. This process addresses the question "What sorts of things are discussed in this carrel?"
+		Outputs the counts and tabulations of individual words (unigrams) in the given carrel.  These are 'interesting' words. This process addresses the question "What sorts of things are discussed in this carrel?"
 		Args:
 			carrel (str): The name of a carrel.
 		Returns:
@@ -368,7 +369,7 @@ def p_getUnigrams( carrel:str, size:int ) :
 @server.tool()
 def getBigrams( carrel:str ) -> str :
 	"""
-		Outputs the counts and tabulations of the two-word phrases (bigrams) from the given carrel. These are interesting words. This process addresses the question "What sorts of things are discussed in this carrel?"
+		Outputs the counts and tabulations of the two-word phrases (bigrams) from the given carrel.  These are 'interesting' words. This process addresses the question "What sorts of things are discussed in this carrel?"
 		Args:
 			carrel (str): The name of a carrel.
 		Returns:

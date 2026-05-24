@@ -39,7 +39,7 @@ library = rdr.configuration( LIBRARY )
 ############## pos: adjectives ##############
 
 @server.tool()
-def getCarrelAdjectives( carrel: str ) -> str:
+def getAdjectives( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a frequency list of of all the adjectives identified as a part-of-speech value. These are POS words. This process helps identify how the things in the carrel are described.
 		Args:
@@ -53,7 +53,7 @@ def getCarrelAdjectives( carrel: str ) -> str:
 	return( str( adjectives[ :segment ] ) )
 
 @server.prompt()
-def p_getCarrelAdjectives( carrel:str ) :
+def p_getAdjectives( carrel:str ) :
 	'''Get all adjectives from the given carrel and extracted from the parts-of-speech process'''
 	return( f'''Given the carrel named '{carrel}', return a frequency list of all the adjectives.''' )
 
@@ -91,7 +91,7 @@ def p_getFullPathToOriginalItem( carrel:str, item: str ) :
 ############## pos: verbs ##############
 
 @server.tool()
-def getCarrelVerbs( carrel: str ) -> str:
+def getVerbs( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a frequency list of of all the lemmatized verbs identified as a part-of-speech value.  These are POS words. This process helps identify what the things in this carrel do; what actions do they take.
 		Args:
@@ -105,7 +105,7 @@ def getCarrelVerbs( carrel: str ) -> str:
 	return( str( verbs[ :segment ] ) )
 
 @server.prompt()
-def p_getCarrelVerbs( carrel:str ) :
+def p_getVerbs( carrel:str ) :
 	'''Get all lemmatized verbs from the given carrel as extracted from the parts-of-speech process'''
 	return( f'''Given the carrel named '{carrel}', return the lemmatized part-of-speech value of VERB.''' )
 
@@ -113,7 +113,7 @@ def p_getCarrelVerbs( carrel:str ) :
 ############## pos: nouns ##############
 
 @server.tool()
-def getCarrelNouns( carrel: str ) -> str:
+def getNouns( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a frequency list of of all the nouns identified as a part-of-speech value. These are POS words. This helps identify what it mentioned in the given carrel.
 		Args:
@@ -127,7 +127,7 @@ def getCarrelNouns( carrel: str ) -> str:
 	return( str( nouns[ :segment ] ) )
 
 @server.prompt()
-def p_getCarrelNouns( carrel:str ) :
+def p_getNouns( carrel:str ) :
 	'''Get all nouns from the given carrel and extracted from the parts-of-speech process'''
 	return( f'''Given the carrel named '{carrel}', return part-of-speech of type NOUN.''' )
 
@@ -135,7 +135,7 @@ def p_getCarrelNouns( carrel:str ) :
 ############## named-entitites: people ##############
 
 @server.tool()
-def getCarrelPeople( carrel: str ) -> str:
+def getPeople( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a frequency list of people identified as a named entity. This helps identify who is mentioned in the carrel. These are entity words.
 		Args:
@@ -149,7 +149,7 @@ def getCarrelPeople( carrel: str ) -> str:
 	return( str( people[ :segment ] ) )
 
 @server.prompt()
-def p_getCarrelPeople( carrel:str ) :
+def p_getPeople( carrel:str ) :
 	'''Get all names of people from the given carrel and extracted from the named entity process'''
 	return( f'''Given the carrel named '{carrel}', return named entities of type PERSON.''' )
 
@@ -157,7 +157,7 @@ def p_getCarrelPeople( carrel:str ) :
 ############## named-entitites: ORG ##############
 
 @server.tool()
-def getCarrelOrganizations( carrel: str ) -> str:
+def getOrganizations( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a frequency list of organizations identified as a named entity. This helps identify what groups of people are mentioned in the carrel. These are entity words.
 		Args:
@@ -171,7 +171,7 @@ def getCarrelOrganizations( carrel: str ) -> str:
 	return( str( organizations[ :segment ] ) )
 
 @server.prompt()
-def p_getCarrelOrganizations( carrel:str ) :
+def p_getOrganizations( carrel:str ) :
 	'''Get all names of organizations from the given carrel and extracted from the named entity process'''
 	return( f'''Given the carrel named '{carrel}', return named entities of type ORG.''' )
 
@@ -179,7 +179,7 @@ def p_getCarrelOrganizations( carrel:str ) :
 ############## named-entitites: GPE ##############
 
 @server.tool()
-def getCarrelPlaces( carrel: str ) -> str:
+def getPlaces( carrel: str ) -> str:
 	'''
 		Given the name of a carrel output a frequency list of places (geo-political entities) identified as a named entity. This helps identify what places are mentioned in the carrel. These are entity words.
 		Args:
@@ -193,7 +193,7 @@ def getCarrelPlaces( carrel: str ) -> str:
 	return( str( places[ :segment ] ) )
 
 @server.prompt()
-def p_getCarrelPlaces( carrel:str ) :
+def p_getPlaces( carrel:str ) :
 	'''Get all names of geo-political entities (places) from the given carrel and extracted from the named entity process'''
 	return( f'''Given the carrel named '{carrel}', return named entities of type GPE.''' )
 
@@ -258,7 +258,7 @@ def getSentencesWord( carrel:str, query:str ) -> str :
 	carrel = carrel.replace( '‑', '-' )
 	
 	DATABASE = 'sentences.db'
-	DEPTH	= 1024
+	DEPTH	= 2048
 	COLUMNS  = [ 'item', 'index', 'sentence' ]
 	SELECT   = "SELECT title AS 'item', item AS 'index', sentence, VEC_DISTANCE_L2(embedding, ?) AS distance FROM sentences ORDER BY distance LIMIT ?"
 	MODEL	= 'locusai/multi-qa-minilm-l6-cos-v1'
@@ -408,7 +408,7 @@ def p_getCatalog() :
 @server.tool()
 def getBibliography( carrel: str ) -> str:
 	"""
-		Output the bibliographic metadata (author, title, date, summary, keywords, flesch score, and number of words) for the given carrel.
+		Output the bibliographic metadata elements (author, title, date, summary, keywords, flesch score, and number of words) for the given carrel.
 		Args:
 			carrel (str): The name of a carrel.
 		Returns:

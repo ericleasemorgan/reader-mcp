@@ -50,7 +50,8 @@ curl -s -X POST "http://localhost:8000/mcp" \
     }
   }' | jq -r '.result|.content[].text' | tr '\n' '\t'
 
-# xyzzy
+
+# authors
 curl -s -X POST "http://localhost:8000/mcp" \
     -H "Content-Type: application/json"       \
     -H "Accept: application/json"             \
@@ -59,10 +60,10 @@ curl -s -X POST "http://localhost:8000/mcp" \
         "id": "1",
         "method": "tools/call",
         "params": {
-            "name": "xyzzy_count",
-            "arguments": {}
+            "name": "getAuthors",
+            "arguments": { "carrel":"homer"}
     }
-  }' | jq -r '.result|.content[].text' | tr '\n' '\t'
+  }' | jq 
 
 # persons
 curl -s -X POST "http://localhost:8000/mcp" \
@@ -130,8 +131,8 @@ curl -s -X POST "http://localhost:8000/mcp" \
         "id": "1",
         "method": "tools/call",
         "params": {
-            "name": "get_sentences_word",
-            "arguments": { "carrel":"homer", "query":"hector" }
+            "name": "getSentencesWord",
+            "arguments": { "carrel":"romans", "query":"maecenas" }
     }
   }' | jq -r '.result|.content[].text' | tr '\n' '\t'
 

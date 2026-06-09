@@ -16,12 +16,14 @@
 # May   24, 2026 - refined the documentation regarding items; works better
 # May   25, 2026 - added getAuthors, getTitles, and getDates
 # May   28, 2026 - refined getSentencesWord
+# June   2, 2026 - removed getSentencesWord; too complicated
+# June   9, 2026 - after using a larger underneath model, restored getSentencesWord; kewl
 
 
 # configure
 NAME	= 'Distant Reader MCP Server'
 LIBRARY = 'localLibrary'
-TXT	 = 'txt'
+TXT	    = 'txt'
 
 # require
 from json			    import loads
@@ -36,6 +38,67 @@ def serialize( vector: List[float]) -> bytes : return pack( "%sf" % len( vector 
 # initailize
 server  = FastMCP( NAME, json_response=True, stateless_http=True )
 library = rdr.configuration( LIBRARY )
+
+
+############## words in sentences ##############
+
+@server.tool()
+def getSentencesWord( carrel:str, query:str ) -> str :
+	"""
+		Output all sentences from the given carrel which contains or are semantically simlar to the given word . The resulting sentences are useful for sentences level analysis across the entire carrel.
+		Args:
+			carrel (str): The name of a carrel.
+			query (str): An individual word or phase
+		Returns:
+			str: a new-line delimited list of sentences
+	"""
+
+	carrel = carrel.replace( '‑', '-' )
+	depth = len( rdr.concordance(carrel, localLibrary=None, query=query.lower()) )
+	
+	DATABASE = 'sentences.db'
+	MAXIMUM  = 2048
+	COLUMNS  = [ 'item', 'index', 'sentence' ]
+	SELECT   = "SELECT title AS 'item', item AS 'index', sentence, VEC_DISTANCE_L2(embedding, ?) AS distance FROM sentences ORDER BY distance LIMIT ?"
+	MODEL	= 'locusai/multi-qa-minilm-l6-cos-v1'
+	
+	from sqlite_vec import load
+	from sqlite3	import connect
+	from ollama	 import embed
+	from pandas	 import DataFrame
+
+	database = connect( rdr.configuration( LIBRARY )/carrel/(rdr.ETC)/DATABASE )
+	database.enable_load_extension( True )
+	load( database )
+
+	# vectorize query and search; get a set of matching records
+	query   = embed( model=MODEL, input=query ).model_dump( mode='json' )[ 'embeddings' ][ 0 ]
+	records = database.execute( SELECT, [ serialize( query ), depth ] ).fetchall()
+
+	sentences = []
+	for index, record in enumerate( records ) :
+	
+		# parse
+		title	= record[ 0 ]
+		item	 = record[ 1 ]
+		sentence = record[ 2 ]
+		distance = record[ 3 ]
+		
+		# short-circuit
+		if index > MAXIMUM : break
+		
+		# update
+		sentences.append( [ title, item, sentence ] )
+	
+	# create a dataframe of the sentences and sort by title
+	sentences = DataFrame( sentences, columns=COLUMNS )
+	return( sentences.to_json( orient='index' ) )
+	#return( str( type( depth ) ) )
+
+@server.prompt()
+def p_getSentencesWord( carrel:str, query:str ) :
+	'''Return the sentences including or semantically similar to the given word or phrase from the given carrel'''
+	return( f'''Given the carrel named '{carrel}' list all of the sentences including or are semantically similar to the word or phrase '{query}'.''' )
 
 
 ############## pos: pronouns ##############
@@ -358,66 +421,6 @@ def p_getPlaintext( carrel:str, item:str ) :
 	return( f'''Given the carrel named '{carrel}' and the identifier '{item}', get the plain text version of the item.''' )
 
 
-############## words in sentences ##############
-
-@server.tool()
-def getSentencesWord( carrel:str, query:str ) -> str :
-	"""
-		Output all sentences from the given carrel which contains or are semantically simlar to the given word or phrase. The resulting sentences are usefu for further analysis.
-		Args:
-			carrel (str): The name of a carrel.
-			query (str): An individual word or phase
-		Returns:
-			str: a new-line delimited list of sentences
-	"""
-
-	carrel = carrel.replace( '‑', '-' )
-	depth = len( rdr.concordance(carrel, localLibrary=None, query=query.lower()) )
-	
-	DATABASE = 'sentences.db'
-	MAXIMUM  = 2048
-	COLUMNS  = [ 'item', 'index', 'sentence' ]
-	SELECT   = "SELECT title AS 'item', item AS 'index', sentence, VEC_DISTANCE_L2(embedding, ?) AS distance FROM sentences ORDER BY distance LIMIT ?"
-	MODEL	= 'locusai/multi-qa-minilm-l6-cos-v1'
-	
-	from sqlite_vec import load
-	from sqlite3	import connect
-	from ollama	 import embed
-	from pandas	 import DataFrame
-
-	database = connect( rdr.configuration( LIBRARY )/carrel/(rdr.ETC)/DATABASE )
-	database.enable_load_extension( True )
-	load( database )
-
-	# vectorize query and search; get a set of matching records
-	query   = embed( model=MODEL, input=query ).model_dump( mode='json' )[ 'embeddings' ][ 0 ]
-	records = database.execute( SELECT, [ serialize( query ), depth ] ).fetchall()
-
-	sentences = []
-	for index, record in enumerate( records ) :
-	
-		# parse
-		title	= record[ 0 ]
-		item	 = record[ 1 ]
-		sentence = record[ 2 ]
-		distance = record[ 3 ]
-		
-		# short-circuit
-		if index > MAXIMUM : break
-		
-		# update
-		sentences.append( [ title, item, sentence ] )
-	
-	# create a dataframe of the sentences and sort by title
-	sentences = DataFrame( sentences, columns=COLUMNS )
-	return( sentences.to_json( orient='index' ) )
-	#return( str( type( depth ) ) )
-
-@server.prompt()
-def p_getSentencesWord( carrel:str, query:str ) :
-	'''Return the sentences including or semantically similar to the given word or phrase from the given carrel'''
-	return( f'''Given the carrel named '{carrel}' list all of the sentences including or are semantically similar to the word or phrase '{query}'.''' )
-
 
 ############## keywords from carrel ##############
 
@@ -601,26 +604,6 @@ def p_getSizeInFlesch( carrel:str ) :
 	return f"""Return the overall Flesch Readability Score (extent) of '{carrel}'."""
 
 
-############## extents ##############
-#
-#@server.tool()
-#def getExtents( carrel:str, type:Literal[ "items", "words", "flesch" ] ) -> int:
-#	"""
-#		Given the name of a study carrel and the type of an extent (items, words, or flesch) return the size of the carrel.
-#		Args:
-#			carrel (str): The name of a local Distant Reader study carrel.
-#			type (str): One of three values: 1) items, 2) words, 3) flesch score
-#		Returns:
-#			int: a number denoting the quanity of the given type
-#	"""
-#	return( rdr.extents( carrel, type ) )
-#
-#@server.prompt()
-#def p_getExtents( carrel:str, type:str ) :
-#	"""Get extents (size measured in words, flesch (readability), size measured in items)."""
-#	return f"""Return the extent '{type}' from the carrel named '{carrel}'."""
-#
-#
 ############## resources, but I don't think they work ##############
 
 @server.resource(

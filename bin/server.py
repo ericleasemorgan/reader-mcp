@@ -58,8 +58,8 @@ def getSentencesWord( carrel:str, query:str ) -> str :
 	
 	DATABASE = 'sentences.db'
 	MAXIMUM  = 2048
-	COLUMNS  = [ 'item', 'index', 'sentence' ]
-	SELECT   = "SELECT title AS 'item', item AS 'index', sentence, VEC_DISTANCE_L2(embedding, ?) AS distance FROM sentences ORDER BY distance LIMIT ?"
+	COLUMNS  = [ 'item', 'idx', 'sentence' ]
+	SELECT   = "SELECT title AS 'item', idx, sentence, VEC_DISTANCE_L2(embedding, ?) AS distance FROM sentences ORDER BY distance LIMIT ?"
 	MODEL	= 'locusai/multi-qa-minilm-l6-cos-v1'
 	
 	from sqlite_vec import load
@@ -80,7 +80,7 @@ def getSentencesWord( carrel:str, query:str ) -> str :
 	
 		# parse
 		title	= record[ 0 ]
-		item	 = record[ 1 ]
+		idx	 = record[ 1 ]
 		sentence = record[ 2 ]
 		distance = record[ 3 ]
 		
@@ -88,7 +88,7 @@ def getSentencesWord( carrel:str, query:str ) -> str :
 		if index > MAXIMUM : break
 		
 		# update
-		sentences.append( [ title, item, sentence ] )
+		sentences.append( [ title, idx, sentence ] )
 	
 	# create a dataframe of the sentences and sort by title
 	sentences = DataFrame( sentences, columns=COLUMNS )

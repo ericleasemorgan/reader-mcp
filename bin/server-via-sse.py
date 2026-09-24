@@ -5,23 +5,22 @@
 # Eric Lease Morgan <eric_morgan@infomotions.com>
 # (c) Infomotions, LLC; distributed under a GNU Public License
 
-# April  27, 2026 - first cut
-# April  28, 2026 - added unigrams; this is working!
-# April  29, 2026 - added sentences and rdr.keywords
-# May     3, 2026 - added a few more tools and associated prompts; I don't think resources work
-# May     7, 2026 - added even more tool; this is really working very well
-# May     8, 2026 - added get full path to original items
-# May    11, 2026 - cleaned up naming conventions; works the same though
-# May    15, 2026 - refined inline to expose interesting, POS, and entity words; limite results to segments of lists
-# May    24, 2026 - refined the documentation regarding items; works better
-# May    25, 2026 - added getAuthors, getTitles, and getDates
-# May    28, 2026 - refined getSentencesWord
-# June    2, 2026 - removed getSentencesWord; too complicated
-# June    9, 2026 - after using a larger underneath model, restored getSentencesWord; kewl
-# June   17, 2026 - added additional local URLs
-# June   22, 2026 - added some refactoring bits as suggestet by an LLM; hmmm.
-# July   14, 2026 - add save to a file; at the cabin
-# August 22, 2026 - limited getSentences to a distance score
+# April 27, 2026 - first cut
+# April 28, 2026 - added unigrams; this is working!
+# April 29, 2026 - added sentences and rdr.keywords
+# May    3, 2026 - added a few more tools and associated prompts; I don't think resources work
+# May    7, 2026 - added even more tool; this is really working very well
+# May    8, 2026 - added get full path to original items
+# May   11, 2026 - cleaned up naming conventions; works the same though
+# May   15, 2026 - refined inline to expose interesting, POS, and entity words; limite results to segments of lists
+# May   24, 2026 - refined the documentation regarding items; works better
+# May   25, 2026 - added getAuthors, getTitles, and getDates
+# May   28, 2026 - refined getSentencesWord
+# June   2, 2026 - removed getSentencesWord; too complicated
+# June   9, 2026 - after using a larger underneath model, restored getSentencesWord; kewl
+# June  17, 2026 - added additional local URLs
+# June  22, 2026 - added some refactoring bits as suggestet by an LLM; hmmm.
+# July  14, 2026 - add save to a file; at the cabin
 
 
 # configure
@@ -29,8 +28,8 @@ NAME	= 'Distant Reader MCP Server'
 LIBRARY = 'localLibrary'
 TXT	    = 'txt'
 MODEL   = 'locusai/multi-qa-minilm-l6-cos-v1'
-MAXIMUM = 2048
-HTML    = 'reader-results.htm'
+MAXIMUM = 4096
+HTML    = 'reader-results.html'
 INSTRUCTIONS = '''Use this server to interact with Distant Reader study carrels (think "data sets"), where study carrels are collections of narrative texts that have been indexed and modeled in a number of ways (bibliographically, parts-of-speech, named entities, keywords, ngrams, etc.) This server can be used to analzye a single study carrel, compare and contrast study different carrels, and even compare and contrast individual items from different study carrels. In short this server supplements the traditional reading process with distant reading techiques. Intended to be used by students, researchers, and scholars, this server is a tool designed to help with the problem of information overoad. This server was writtten by Eric Lease Morgan <eric_morgan@infomotions.com>'''
 
 
@@ -121,10 +120,10 @@ def getSentences( carrel:str, query:str ) -> str :
 	"""
 
 	carrel   = normalize( carrel )
-	#depth    = len( rdr.concordance(carrel, localLibrary=None, query=query.lower()) )
+	depth    = len( rdr.concordance(carrel, localLibrary=None, query=query.lower()) )
 
 	DATABASE = 'sentences.db'
-	COLUMNS  = [ 'item', 'idx', 'sentence', 'distance' ]
+	COLUMNS  = [ 'item', 'idx', 'sentence' ]
 	SELECT   = "SELECT title AS 'item', idx, sentence, VEC_DISTANCE_L2(embedding, ?) AS distance FROM sentences ORDER BY distance LIMIT ?"	
 	database = connect( rdr.configuration( LIBRARY )/carrel/(rdr.ETC)/DATABASE )
 	database.enable_load_extension( True )
@@ -132,7 +131,7 @@ def getSentences( carrel:str, query:str ) -> str :
 
 	# vectorize query and search; get a set of matching records
 	query   = embed( model=MODEL, input=query ).model_dump( mode='json' )[ 'embeddings' ][ 0 ]
-	records = database.execute( SELECT, [ serialize( query ), MAXIMUM ] ).fetchall()
+	records = database.execute( SELECT, [ serialize( query ), 128 ] ).fetchall()
 
 	# process each record; create a list of sentences
 	sentences = []
@@ -145,11 +144,10 @@ def getSentences( carrel:str, query:str ) -> str :
 		distance = record[ 3 ]
 		
 		# short-circuit
-		#if index > MAXIMUM : break
-		if distance > 1 : break
+		if index > MAXIMUM : break
 		
 		# update
-		sentences.append( [ title, idx, sentence, distance ] )
+		sentences.append( [ title, idx, sentence ] )
 	
 	# create a dataframe of the sentences and sort by title
 	sentences = DataFrame( sentences, columns=COLUMNS )
@@ -902,6 +900,7 @@ def r_readme( carrel: str ) -> str:
 # go
 if __name__ == "__main__" :
 
+	server.run( transport="sse" )
 	#server.run( transport="streamable-http" )
-	server.run( transport="stdio" )
+	#server.run( transport="stdio" )
 

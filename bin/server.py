@@ -36,7 +36,7 @@ INSTRUCTIONS = '''Use this server to interact with Distant Reader study carrels 
 
 # require
 from json			    import loads
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from ollama	            import embed
 from pandas	            import DataFrame, read_csv
 from sqlite_vec         import load
@@ -87,7 +87,8 @@ def _get_url( carrel: str, item: str, folder: str, extension: str ) -> str:
 
 
 # initailize
-server  = FastMCP( NAME, instructions=INSTRUCTIONS, json_response=True, stateless_http=True )
+#server  = MCPServer( NAME, instructions=INSTRUCTIONS, json_response=True, stateless_http=True )
+server  = MCPServer( NAME, instructions=INSTRUCTIONS )
 library = rdr.configuration( LIBRARY )
 
 
